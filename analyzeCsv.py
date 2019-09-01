@@ -10,9 +10,11 @@ import seaborn as sns
 import os
 import pandas_queries
 import utils
+import sys
+import argparse
 
 
-file_name = 'no track_28 enemy vel_90 uav vel_30 iter'
+file_name = 'run___i40_e5_u2_d2000___short'
 
 OnAllCatched = 'OnAllCatched%s|'
 MAX_enemy = 10
@@ -31,42 +33,35 @@ def find_best_thr(csv_file):
 
 def main():
 
-    if not os.path.exists(utils.DIRECTORY):
-        os.makedirs(utils.DIRECTORY)
+    parser = argparse.ArgumentParser(
+        description='Analyze CSV arguments')
 
-    temp = 'C:/Users/AVIADFUX/Desktop/Projects/Mor_project/analyze/csv file/%s.csv'
+    parser.add_argument('--path_table', type=str)
+    parser.add_argument('--enemy_count', type=int)
+    parser.add_argument('--uav_count', type=int)
+    parser.add_argument('--delay', type=int)
+    parser.add_argument('--dp', type=float)
+    parser.add_argument('--exploration_algo', type=str) #m/a/h
+    parser.add_argument('--fixed_player', type=str)
+    parser.add_argument('--fixed_num', type=str)
+    parser.add_argument('--graph_type', type=str, default="compare_algo")
 
-    path = temp % file_name
+    args = parser.parse_args()
 
-    results_csv = pd.read_csv(path, error_bad_lines=False)
+    results_csv = pd.read_csv(args.path_table, error_bad_lines=False)
 
-    results_csv = results_csv.loc[lambda df: df.delay == 2000]
+    results_csv = results_csv.loc[lambda df: df.delay == args.delay]
+
+    if args.graph_type == "compare_algo":
+        utils.comparing_algorithms(results_csv, args.path_table, general_comparison=False, enemy_count=args.enemy_count, uav_count=args.uav_count)
+    elif args.graph_type == "general_compare_algo":
+        utils.comparing_algorithms(results_csv, args.path_table)
+    elif args.graph_type == "fixed_player":
+        data_base, THR = pandas_queries.create_data_base(results_csv)
+        utils.comparing_algorithms_fixed_player(data_base, dp=args.dp, fixed_player=args.fixed_player, fixed_num=args.fixed_num)
 
     best_thr = find_best_thr(results_csv)
 
-    data_base, THR = pandas_queries.create_data_base(results_csv)
-    utils.comparing_algorithms_fixed_player(data_base, dp=0.7, fixed_player="uav", fixed_num=1)
-    utils.comparing_algorithms_fixed_player(data_base, dp=0.8, fixed_player="uav", fixed_num=1)
-    utils.comparing_algorithms_fixed_player(data_base, dp=0.9, fixed_player="uav", fixed_num=1)
-    utils.comparing_algorithms_fixed_player(data_base, dp=0.6, fixed_player="uav", fixed_num=1)
-    utils.comparing_algorithms_fixed_player(data_base, dp=1, fixed_player="uav", fixed_num=1)
-    utils.comparing_algorithms_fixed_player(data_base, dp=0.5, fixed_player="uav", fixed_num=1)
-
-    # utils.comparing_algorithms_fixed_player(data_base, dp=0.5, fixed_player="enemy", fixed_num=1)
-    # utils.comparing_algorithms_fixed_player(data_base, dp=0.6, fixed_player="enemy", fixed_num=1)
-    # utils.comparing_algorithms_fixed_player(data_base, dp=0.7, fixed_player="enemy", fixed_num=1)
-    # utils.comparing_algorithms_fixed_player(data_base, dp=0.8, fixed_player="enemy", fixed_num=1)
-    # utils.comparing_algorithms_fixed_player(data_base, dp=0.9, fixed_player="enemy", fixed_num=1)
-    # utils.comparing_algorithms_fixed_player(data_base, dp=1, fixed_player="enemy", fixed_num=1)
-
-
-    utils.comparing_algorithms(results_csv, utils.DIRECTORY, general_comparison=False, enemy_count=1, uav_count=1)
-    utils.comparing_algorithms(results_csv, utils.DIRECTORY, general_comparison=False, enemy_count=2, uav_count=1)
-    utils.comparing_algorithms(results_csv, utils.DIRECTORY, general_comparison=False, enemy_count=3, uav_count=1)
-    utils.comparing_algorithms(results_csv, utils.DIRECTORY, general_comparison=False, enemy_count=4, uav_count=1)
-    utils.comparing_algorithms(results_csv, utils.DIRECTORY, general_comparison=False, enemy_count=5, uav_count=1)
-    utils.comparing_algorithms(results_csv, utils.DIRECTORY, general_comparison=False, enemy_count=6, uav_count=1)
-    utils.comparing_algorithms(results_csv, utils.DIRECTORY)
 
 if __name__ == '__main__':
     main()
