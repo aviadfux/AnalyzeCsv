@@ -25,6 +25,7 @@ def main():
     global_table = pd.concat(global_table).reset_index()
     global_table.to_csv("C:\\Users\\AVIADFUX\\Desktop\\Projects\\Mor_project\\analyze\\csv file\\17-9\\global\\global_table.csv", sep=',')
 
+
     v=8
 
 if __name__ == '__main__':

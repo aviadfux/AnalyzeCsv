@@ -74,7 +74,6 @@ def main():
         data_base, THR = pandas_queries.create_data_base(results_csv)
         utils.comparing_algorithms_fixed_player(data_base, dp=args.dp, fixed_player=args.fixed_player, fixed_num=args.fixed_num)
 
-
     best_thr = find_best_thr(results_csv)
 
 

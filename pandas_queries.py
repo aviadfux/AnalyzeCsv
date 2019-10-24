@@ -131,6 +131,7 @@ def create_success_rates_table_SCOUT(directory, CSV_file, DET_range, THR_range, 
                 heatmap[i][j] = (success_num / (success_num + failures_num)) * 100
 
     plot_graph.create_heatmap(heatmap, THR_range, DET_range, pdf_name,
+
                               'Success Rate')
     # create_heatmap(heatmap, np.around(THR_range, 1), np.around(DET_range, 1), pdf_name, 'Success rates')
     # createCsvFile(heatmap, THR_range, DET_range, pdf_name)

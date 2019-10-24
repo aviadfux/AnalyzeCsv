@@ -27,6 +27,7 @@ def main():
         except:
             continue
 
+
         if len(next_Sections_Id) == 0: continue
 
         """Iterate on students paths and check if exist path that goes through section_id"""
