@@ -1,3 +1,6 @@
+from pickletools import decimalnl_long
+import plot_graph
+
 import numpy as np
 import datetime
 import operator
@@ -83,7 +86,7 @@ def create_data_base_scout(csv):
                     b=9
     return algo_data_base, THR
 
-def create_success_rates_table_SCOUT(directory, CSV_file, is_genaral_comparison=True, enemyCount=0, uavCount=0):
+def create_success_rates_table_SCOUT(directory, CSV_file, DET_range, THR_range, is_genaral_comparison=True, enemyCount=0, uavCount=0):
     algorithm = 'SCOUT'
 
     if is_genaral_comparison:
@@ -103,20 +106,14 @@ def create_success_rates_table_SCOUT(directory, CSV_file, is_genaral_comparison=
                 lambda df: df.initialUavCount == uavCount].loc[
                 lambda df: df.Algorithm == algorithm]
 
-    DET_SIZE = 6
-    THR_SIZE = 9
-    min_range = 1
-    max_range = 10
-    DET_range = np.arange(0.5, 1.09, 0.1)
-    THR_range = np.arange(0.1, 1.0, 0.1)
+    best_thr = [find_best_thr_by_dp(CSV_file, THR_range, i) for i in DET_range]
 
-    heatmap = np.zeros((DET_SIZE, THR_SIZE))
-    for i in range(5, 11):
-        DETECTION_PROB = i / 10
+    heatmap = np.zeros((len(DET_range), len(THR_range)))
+
+    for i, DETECTION_PROB in enumerate(DET_range):
         if DETECTION_PROB not in CSV_file[['DETECTION_PROBABILITY']].values: continue
 
-        for j in range(min_range, max_range):
-            THR = j / 10
+        for j, THR in enumerate(THR_range):
             if THR not in CSV_file[['CELL_CHOOSE_PROB_THRESHOLD']].values: continue
 
             # filter by detection prob and threshold per all success scenarios
@@ -130,12 +127,16 @@ def create_success_rates_table_SCOUT(directory, CSV_file, is_genaral_comparison=
 
             failures_num = len(failures[['success']].values)
             if success_num + failures_num > 0:
-                heatmap[i - 5][j - 1] = (success_num / (success_num + failures_num)) * 100
 
+                heatmap[i][j] = (success_num / (success_num + failures_num)) * 100
+
+    plot_graph.create_heatmap(heatmap, THR_range, DET_range, pdf_name,
+
+                              'Success Rate')
     # create_heatmap(heatmap, np.around(THR_range, 1), np.around(DET_range, 1), pdf_name, 'Success rates')
     # createCsvFile(heatmap, THR_range, DET_range, pdf_name)
     # create_table(pdf_name, heatmap, 100, 30, 'success rate percent', DET_range, THR_range)
-    return max_values(heatmap)
+    return max_values(heatmap), best_thr
 
 def max_values(heatmap):
     """
@@ -153,7 +154,7 @@ def max_values(heatmap):
 
     return list_of_coordinates_for_each_row
 
-def create_duration_table(CSV_file, algorithm, is_genaral_comparison=True, enemyCount=0, uavCount=0):
+def create_duration_table(DET_range, CSV_file, algorithm, delay, is_genaral_comparison=True, enemyCount=0, uavCount=0):
     path = 'C:/Users/AVIADFUX/Desktop/Projects/Mor_project/analyze/results/'
 
     if is_genaral_comparison:
@@ -175,19 +176,18 @@ def create_duration_table(CSV_file, algorithm, is_genaral_comparison=True, enemy
                 lambda df: df.Algorithm == algorithm]
 
 
-    list_duration_detection = np.zeros((6))
-    for i in range(5, 11):
-        DETECTION_PROB = i / 10
+    list_duration_detection = np.zeros((len(DET_range)))
+    for i, DETECTION_PROB in enumerate(DET_range):
         if DETECTION_PROB not in CSV_file[['DETECTION_PROBABILITY']].values: continue
 
         # filter by detection prob and threshold per all success scenarios
         success_filter = CSV_file.loc[lambda df: df.DETECTION_PROBABILITY == DETECTION_PROB].loc[lambda df: df.success == 1]
         if len(success_filter[['duration']].values) > 0:
-            list_duration_detection[i - 5] = success_filter[['duration']].values.mean(axis=0)
+            list_duration_detection[i] = success_filter[['duration']].values.mean(axis=0) - delay
 
     return list_duration_detection
 
-def create_success_rates_table(CSV_file, algorithm, is_genaral_comparison=True, enemyCount=0, uavCount=0):
+def create_success_rates_table(DET_range, CSV_file, algorithm, is_genaral_comparison=True, enemyCount=0, uavCount=0):
     path = 'C:/Users/AVIADFUX/Desktop/Projects/Mor_project/analyze/results/'
 
     if is_genaral_comparison:
@@ -209,9 +209,8 @@ def create_success_rates_table(CSV_file, algorithm, is_genaral_comparison=True, 
                 lambda df: df.Algorithm == algorithm]
 
 
-    list_detection_success_rate = np.zeros((6))
-    for i in range(5, 11):
-        DETECTION_PROB = i / 10
+    list_detection_success_rate = np.zeros((len(DET_range)))
+    for i, DETECTION_PROB in enumerate(DET_range):
         if DETECTION_PROB not in CSV_file[['DETECTION_PROBABILITY']].values: continue
 
         # filter by detection prob and threshold per all success scenarios
@@ -223,12 +222,12 @@ def create_success_rates_table(CSV_file, algorithm, is_genaral_comparison=True, 
 
         failures_num = len(failures[['success']].values)
         if success_num + failures_num > 0:
-            list_detection_success_rate[i - 5] = (success_num / (success_num + failures_num)) * 100
+            list_detection_success_rate[i] = (success_num / (success_num + failures_num)) * 100
 
     return list_detection_success_rate
 
 
-def find_best_thr_by_dp(csv_file, dp):
+def find_best_thr_by_dp(csv_file, THR_range, dp):
     """
     This method find the best THR for specific detection probability
     :param csv_file:
@@ -239,15 +238,65 @@ def find_best_thr_by_dp(csv_file, dp):
     filter = csv_file.loc[lambda df: df.Algorithm == 'SCOUT']
     filter = filter.loc[lambda df: df.DETECTION_PROBABILITY == dp]
 
+    if filter.empty:
+        return 0
     thr_dict = {}
-    for j in range(1, 10):
-        THR = j / 10
+    for j, THR in enumerate(THR_range):
         failures = filter.loc[lambda df: df.CELL_CHOOSE_PROB_THRESHOLD == THR].loc[lambda df: df.success == 0]
         success = filter.loc[lambda df: df.CELL_CHOOSE_PROB_THRESHOLD == THR].loc[lambda df: df.success == 1]
 
         failures_num = len(failures[['success']].values)
         success_num = len(success[['success']].values)
 
+        if success_num + failures_num == 0: continue
+
         thr_dict[THR] = success_num / (success_num + failures_num)
 
     return max(thr_dict.items(), key=operator.itemgetter(1))[0]
+
+
+def create_duration_table_SCOUT(directory, CSV_file, DET_range, THR_range, delay, is_genaral_comparison=True,
+                                enemyCount=0, uavCount=0):
+    algorithm = 'SCOUT'
+
+    if is_genaral_comparison:
+        pdf_name = directory + '_duration_' + algorithm + '-algorithm_general_' + str(
+            datetime.datetime.today()).replace(' ', '_').replace(':', '-') + '.'
+
+        # filter  by algorithm kind
+        filtered_file = CSV_file.loc[lambda df: df.Algorithm == algorithm]
+
+    else:
+        pdf_name = directory + '_duration_' + algorithm + '-algorithm_[' + str(
+            enemyCount) + ']-enemy_[' + str(uavCount) + ']-UAV_' + str(datetime.datetime.today()).replace(' ',
+                                                                                                          '_').replace(
+            ':', '-') + '.'
+
+        # filter by enemies and UAVs count and by algorithm kind
+        filtered_file = \
+            CSV_file.loc[lambda df: df.initialEnemyCount == enemyCount].loc[
+                lambda df: df.initialUavCount == uavCount].loc[
+                lambda df: df.Algorithm == algorithm]
+
+    heatmap = np.zeros((len(DET_range), len(THR_range)))
+
+    for i, DETECTION_PROB in enumerate(DET_range):
+        if DETECTION_PROB not in filtered_file[['DETECTION_PROBABILITY']].values: continue
+
+        for j, THR in enumerate(THR_range):
+            if THR not in filtered_file[['CELL_CHOOSE_PROB_THRESHOLD']].values: continue
+
+            # filter by detection prob and threshold per all success scenarios
+            filter = filtered_file.loc[lambda df: df.DETECTION_PROBABILITY == DETECTION_PROB].loc[
+                lambda df: df.CELL_CHOOSE_PROB_THRESHOLD == THR].loc[lambda df: df.success == 1]
+            if len(filter[['duration']].values) > 0:
+                heatmap[i][j] = filter[['duration']].values.mean(axis=0) - delay
+
+    # plot_graph.create_heatmap(heatmap, np.around(THR_range, 1), np.around(DET_range, 1), pdf_name, 'Duration until enemy cathed')
+    plot_graph.create_heatmap(heatmap, THR_range, DET_range, pdf_name,
+                              'Duration until enemy cathed')
+    return heatmap
+    # min_values_for_each_row(heatmap)
+    # createCsvFile(heatmap, THR_range, DET_range, pdf_name)
+    # createPolysTable(heatmap, THR_range, min(set(filtered_file[['duration']].values.flatten())), max(set(filtered_file[['duration']].values.flatten())))
+    # create_table(pdf_name, heatmap, max(set(filtered_file[['duration']].values.flatten())), min(set(filtered_file[['duration']].values.flatten())), 'Catched Enemy Duration', DET_range, THR_range, True)
