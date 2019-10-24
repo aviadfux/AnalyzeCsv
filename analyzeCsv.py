@@ -14,7 +14,7 @@ import sys
 import argparse
 
 
-file_name = 'run___i40_e5_u2_d2000___short'
+file_name = 'run___name_manual1_mor_i10_e3_u2_d2100_a1_mp1e-06_ourpths_nt___short'
 
 OnAllCatched = 'OnAllCatched%s|'
 MAX_enemy = 10
@@ -37,20 +37,34 @@ def main():
         description='Analyze CSV arguments')
 
     parser.add_argument('--path_table', type=str)
-    parser.add_argument('--enemy_count', type=int)
-    parser.add_argument('--uav_count', type=int)
-    parser.add_argument('--delay', type=int)
-    parser.add_argument('--dp', type=float)
-    parser.add_argument('--exploration_algo', type=str) #m/a/h
-    parser.add_argument('--fixed_player', type=str)
-    parser.add_argument('--fixed_num', type=str)
+    parser.add_argument('--enemy_count', type=int, default=2)
+    parser.add_argument('--uav_count', type=int, default=1)
+    parser.add_argument('--delay', type=int, default=2000)
+    parser.add_argument('--dp', type=float, default=0.7)
+    parser.add_argument('--exploration_algo', type=str, default='a') #m/a/h/sp
+    parser.add_argument('--fixed_player', type=str, default='uav')
+    parser.add_argument('--fixed_num', type=str, default='our')
     parser.add_argument('--graph_type', type=str, default="compare_algo")
 
     args = parser.parse_args()
 
     results_csv = pd.read_csv(args.path_table, error_bad_lines=False)
 
-    results_csv = results_csv.loc[lambda df: df.delay == args.delay]
+    #ranges:
+    DET_range = np.around(np.arange(0.6, 1.0, 0.1), decimals=1).tolist()
+    #DET_range.append(1)
+    THR_range = np.around(np.arange(0.1, 0.45, 0.05), decimals=2).tolist()
+
+    for path_type in ['our']:
+        for delay in [2000]:
+            for algo in ['m']:
+                parsed = results_csv.loc[lambda df: df.delay == delay]
+                parsed = parsed.loc[lambda df: df.exploration_algo == algo]
+                parsed = parsed.loc[lambda df: df.isOur == path_type]
+
+                utils.comparing_algorithms(parsed, args.path_table, DET_range, THR_range, delay, algo, path_type, general_comparison=False,
+                                           enemy_count=args.enemy_count, uav_count=args.uav_count)
+
 
     if args.graph_type == "compare_algo":
         utils.comparing_algorithms(results_csv, args.path_table, general_comparison=False, enemy_count=args.enemy_count, uav_count=args.uav_count)

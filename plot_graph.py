@@ -49,12 +49,14 @@ def comparing_algorithms_bars_fixed_scenarios(directory, SCOUT_results, ENTROPY_
 
     if IS_SHOW_PLT: plt.show()
 
-def comparing_algorithms_bars(directory, SCOUT_results, ENTROPY_results, MAX_PROB_results, RANDOM_results, IsSuccessRate, is_genaral_comparison=True, enemyCount=0, uavCount=0):
+def comparing_algorithms_bars(DET_range, directory, SCOUT_results, best_thr, ENTROPY_results, MAX_PROB_results, RANDOM_results,
+                              delay, algo, path_type, IsSuccessRate,
+                              is_genaral_comparison=True, enemyCount=0, uavCount=0):
     width = 0.30  # the width of the bars
 
     fig, ax = plt.subplots()
 
-    ind = np.arange(6)
+    ind = np.arange(len(DET_range))
     scout = ax.bar(ind + width / 4, SCOUT_results, width/2,
                      label='Scout')
     entropy = ax.bar(ind - 3*width / 4, ENTROPY_results, width/2,
@@ -71,19 +73,23 @@ def comparing_algorithms_bars(directory, SCOUT_results, ENTROPY_results, MAX_PRO
 
     if IsSuccessRate:
         comparison_name = ylabel = 'Success Rate'
-        title = "Graph for success rate by detection probability for {0} scenario".format(scenario)
+        title = "Graph for success rate by detection probability for {0} scenario" \
+                "\n{1}" \
+                "\nd{2}_algo-{3}_ourpath-{4}".format(scenario, best_thr, delay, algo, path_type)
         ax.set_ylim(0, 100)
     else:
         comparison_name = ylabel = 'Duration'
-        title = "Graph for Duration by detection probability for {0} scenario".format(scenario)
-        ax.set_ylim(1500, 3500)
+        title = "Graph for Duration by detection probability for {0} scenario" \
+                "\n{1}" \
+                "\nd{2}_algo-{3}_ourpath-{4}".format(scenario, best_thr, delay, algo, path_type)
+        #ax.set_ylim(1500, 3500)
 
     # Add some text for labels, title and custom x-axis tick labels, etc.
     ax.set_ylabel(ylabel)
     ax.set_xlabel("Detection Probability")
     ax.set_title(title)
     ax.set_xticks(ind)
-    ax.set_xticklabels(np.around(np.arange(0.5, 1.01, 0.1), 1))
+    ax.set_xticklabels(np.array(DET_range))
     ax.legend()
 
     with PdfPages(
@@ -101,11 +107,11 @@ def create_heatmap(heatmap, THR, DET, file_name, title):
         sns.set(font_scale=0.8)
 
         THR = np.append(np.zeros(1), THR)
-
-        DET = DET.reshape(len(DET), 1)
+        DET = np.append(np.zeros(1), np.array(DET)).reshape(len(DET) + 1, 1)
+        heatmap = np.vstack((np.zeros(heatmap.shape[1]), heatmap))
         heatmap = np.append(DET, heatmap, axis=1)
-
         heatmap = np.vstack((THR, heatmap))
+        heatmap = np.vstack((heatmap, np.zeros(heatmap.shape[1])))
 
         pandasTable = pd.DataFrame(data=heatmap[1:, 1:], index=heatmap[1:, 0], columns=heatmap[0, 1:])
 
